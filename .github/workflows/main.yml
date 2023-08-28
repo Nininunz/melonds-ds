@@ -1,0 +1,75 @@
+name: Build Artifacts
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+jobs:
+  windows:
+    name: Windows (x86_64)
+    uses: ./.github/workflows/build.yaml
+    with:
+      archive-name: melondsds_libretro-win32-x86_64
+      runs-on: windows-latest
+      info-dir: info
+      lib-ext: dll
+      shell: msys2 {0}
+      ccache: sccache
+      cmake-args: -DENABLE_SCCACHE=ON -DSCCACHE="C:/Users/runneradmin/.cargo/bin/sccache.exe"
+      # Using sccache on Windows due to https://github.com/hendrikmuhs/ccache-action/issues/112
+
+  macos:
+    name: macOS (Universal)
+    uses: ./.github/workflows/build.yaml
+    with:
+      archive-name: melondsds_libretro-macos-universal
+      runs-on: macos-latest
+      lib-ext: dylib
+      cmake-args: -DCMAKE_OSX_ARCHITECTURES:STRING="arm64;x86_64" -DENABLE_OGLRENDERER=OFF
+      # Disabled OpenGL on macOS due to https://github.com/JesseTG/melonds-ds/issues/12
+
+  linux-x86_64:
+    name: Linux (x86_64)
+    uses: ./.github/workflows/build.yaml
+    with:
+      archive-name: melondsds_libretro-linux-x86_64
+      runs-on: ubuntu-latest
+      lib-ext: so
+
+  linux-aarch64:
+    name: Linux (aarch64)
+    uses: ./.github/workflows/build.yaml
+    with:
+      archive-name: melondsds_libretro-linux-aarch64
+      runs-on: ubuntu-20.04
+      lib-ext: so
+      cmake-args: -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc-10 -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++-10 -DPKG_CONFIG_EXECUTABLE=/usr/bin/aarch64-linux-gnu-pkg-config
+
+  android:
+    name: Android
+    uses: ./.github/workflows/build.yaml
+    with:
+      lib-ext: so
+      archive-name: melondsds_libretro-android
+      lib-name: melondsds_libretro
+      cmake-args: -DENABLE_OGLRENDERER=OFF -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=24 -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake"
+      runs-on: ubuntu-latest
+      # Disabled OpenGL on Android due to https://github.com/JesseTG/melonds-ds/issues/23
+
+  ios:
+    name: iOS
+    uses: ./.github/workflows/build.yaml
+    with:
+      runs-on: macos-latest
+      archive-name: melondsds_libretro-ios
+      info-dir: info
+      lib-ext: dylib
+      lib-name: melondsds_libretro_ios
+      cmake-args: -DENABLE_OGLRENDERER=OFF -DENABLE_JIT=OFF --toolchain ./cmake/toolchain/ios.toolchain.cmake -DPLATFORM=OS64 -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=13.0 -DDEPLOYMENT_TARGET=13 -DENABLE_STRICT_TRY_COMPILE_INT:BOOL=ON
+      # Disabled OpenGL on iOS due to https://github.com/JesseTG/melonds-ds/issues/23
